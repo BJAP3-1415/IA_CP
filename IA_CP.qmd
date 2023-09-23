@@ -46,6 +46,7 @@ library(tidymodels)
 library(GGally)
 library(randomForest)
 library(paletteer)
+
 ```
 
 
@@ -594,17 +595,12 @@ saveRDS(CP_boost_model, 'CP_boost_model.rds')
 ```
 
 ```{r}
-
 # Load the model
 loaded_model <- readRDS("CP_boost_model.rds")
 
 # Use the model to predict rentals
 results_1 <- loaded_model %>% 
   augment(dataTest)
-
-# See model predictions 
-View(results_1)
-
 ```
 
 # RESULTADOS
