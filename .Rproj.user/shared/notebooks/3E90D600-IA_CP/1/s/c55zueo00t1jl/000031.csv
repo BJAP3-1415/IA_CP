@@ -1,0 +1,5 @@
+"0","dataA2 <- data.frame(Fecha = as.Date(paste(2023, meses2023, ""01"", sep = ""-""), format = ""%Y-%m-%d""),cantidad =dataA2[2] )
+"
+"2","Error in data.frame(Fecha = as.Date(paste(2023, meses2023, ""01"", sep = ""-""),  : 
+  arguments imply differing number of rows: 7, 8
+"

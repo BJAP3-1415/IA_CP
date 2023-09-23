@@ -1,0 +1,639 @@
+---
+title: "Innovando la Contratación Pública con Inteligencia Artificial"
+subtitle: 'TIAckathon 2023'
+
+title-block-banner: "#465050" 
+author: 
+  - name: Bryan Jair Aragón Pilco
+date: today
+format:
+  html: 
+    theme: Slate
+    documentclass: 'report'
+    toc: true
+    number-sections: true
+    toc-title: 'Tabla de Contenido'
+    toc-location: left
+    toc-depth: 4
+    embed-resources: true
+    smooth-scroll: true
+    
+execute: 
+  echo: true
+  warning: false
+  error: false
+---
+
+# INTRODUCCIÓN
+
+Las Contrataciones Abiertas permiten mejorar la divulgación, calidad y uso de los datos de compras públicas en todas las fases del procedimiento mediante la implementación del Estándar de Datos para las Contrataciones Abiertas - EDCA (OCDS). 
+
+El presente trabajo pretende centrar a la Contratación Pública como herramienta fundamental para tomar decisiones de Política Monetaria, su importancia radica en la gran cantidad de dinero que es destinada año a año a los procesos de Compras Públicas. Esta importante suma de dinero tiene como finalidad dinamizar el trabajo a través de los distintos proveedores, es decir, la eficiencia y el buen manejo del dinero hacia el destinatario final mejorará la economía del país, puesto que, el proveedor, contratista, consultor o cualquier persona que le venda sus servicios, obras y bienes al pondrá a trabajar el dinero obtenido, dando empelo, adquiriendo suministros o cualquier materia prima que le permita cumplir con el objeto de contratación. 
+
+::: callout-note
+El presente análisis se realiza mediante el lenguaje R y se presenta en formato QUARTO. Palabras claves: Liquidez M2, Gastos del Sector Público, Ingresos tributarios, Política Económica.
+:::
+
+# LIBRERÍAS UTILIZADAS
+
+```{r}
+library(tidyverse)
+library(openxlsx)
+library(lubridate)
+library(readxl)
+library(corrplot)
+library(tidymodels)
+library(GGally)
+library(randomForest)
+library(paletteer)
+```
+
+
+# DATA
+
+> Los datos serán filtrados y representados de forma mensual a partir de enero del 2015 hasta agosto del 2023. Los datos con los que se realiza el presente trabajo constan de 4 variables:
+
+
+| Descripción               | Siglas    | Unidad | Tipo         |
+|---------------------------|-----------|--------|--------------|
+| Liquidez Total            | M2        | num    | Independiente|
+| Ingresos Tributarios      | Ingr_trib | num    | Independiente|
+| Gastos del Sector Público | Gast_SPF  | num    | Independiente|
+| Contratación Pública      | CP        | num    | Dependiente  |
+
+: Variables utilizadas {#tbl-letters}
+
+## Data OCDS
+
+Los datos se extraen de la siguiente página: [DataOCD](https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA)
+
+> **Data OCDS, correspondiente al total del monto adjudicado del año 2023.**
+
+```{r}
+dataA1 <- read.csv('awards_2023.csv')
+dataA1 <- as.data.frame(dataA1) %>% 
+  select(c(date, amount)) %>% 
+  drop_na() %>% 
+  mutate(date= ymd_hms(date)) %>% 
+  mutate(mes = month(date))
+  
+dataA2 <- dataA1 %>% 
+  select(c(amount, mes)) %>% 
+  mutate_all(~coalesce(.,8)) %>% 
+  group_by(mes)%>% 
+  summarise(amount= sum(amount)) %>% 
+  slice(-c( 9))
+  
+paste('El monto total de Contratación pública al 2023 representa la cantidad de:',sum(dataA2$amount), 'usd.')
+
+```
+
+> **Data OCDS, correspondiente al total del monto adjudicado del año 2022.**
+
+```{r}
+dataB1 <- read.csv('awards_2022.csv')
+dataB1 <- as.data.frame(dataB1) %>% 
+  select(c(date, amount)) %>% 
+  drop_na() %>% 
+  mutate(date= ymd_hms(date)) %>% 
+  mutate(mes = month(date))
+  
+dataB2 <- dataB1 %>% 
+  select(c(amount, mes)) %>% 
+  mutate_all(~coalesce(.,12)) %>% 
+  group_by(mes)%>% 
+  summarise(amount= sum(amount))
+
+
+paste('El monto total de Contratación pública del año 2022 representa la cantidad de:',sum(dataB2$amount), 'usd.')
+```
+
+> **Data OCDS, correspondiente al total del monto adjudicado del año 2021.**
+
+```{r}
+dataC1 <- read.csv('awards_2021.csv')
+dataC1 <- as.data.frame(dataC1) %>% 
+  select(c(date, amount)) %>% 
+  drop_na() %>% 
+  mutate(date= ymd_hms(date)) %>% 
+  mutate(mes = month(date))
+  
+dataC2 <- dataC1 %>% 
+  select(c(amount, mes)) %>% 
+  mutate_all(~coalesce(.,12)) %>% 
+  group_by(mes)%>% 
+  summarise(amount= sum(amount))
+
+paste('El monto total de Contratación pública del año 2021 representa la cantidad de:',sum(dataC2$amount), 'usd.')
+```
+
+> **Data OCDS, correspondiente al total del monto adjudicado del año 2020.**
+
+```{r}
+dataD1 <- read.csv('awards_2020.csv')
+dataD1 <- as.data.frame(dataD1) %>% 
+  select(c(date, amount)) %>% 
+  drop_na() %>% 
+  mutate(date= ymd_hms(date)) %>% 
+  mutate(mes = month(date))
+  
+dataD2 <- dataD1 %>% 
+  select(c(amount, mes)) %>% 
+  mutate_all(~coalesce(.,12)) %>% 
+  group_by(mes)%>% 
+  summarise(amount= sum(amount))
+
+paste('El monto total de Contratación pública del año 2020 representa la cantidad de:',sum(dataD2$amount), 'usd.')
+```
+
+> **Data OCDS, correspondiente al total del monto adjudicado del año 2019.**
+
+```{r}
+dataE1 <- read.csv('awards_2019.csv')
+dataE1 <- as.data.frame(dataE1) %>% 
+  select(c(date, amount)) %>% 
+  drop_na() %>% 
+  mutate(date= ymd_hms(date)) %>% 
+  mutate(mes = month(date))
+  
+dataE2 <- dataE1 %>% 
+  select(c(amount, mes)) %>% 
+  mutate_all(~coalesce(.,12)) %>% 
+  group_by(mes)%>% 
+  summarise(amount= sum(amount))
+
+paste('El monto total de Contratación pública del año 2019 representa la cantidad de:',sum(dataE2$amount), 'usd.')
+```
+
+> **Data OCDS, correspondiente al total del monto adjudicado del año 2018.**
+
+```{r}
+dataF1 <- read.csv('awards_2018.csv')
+dataF1 <- as.data.frame(dataF1) %>% 
+  select(c(date, amount)) %>% 
+  drop_na() %>% 
+  mutate(date= ymd_hms(date)) %>% 
+  mutate(mes = month(date))
+  
+dataF2 <- dataF1 %>% 
+  select(c(amount, mes)) %>% 
+  mutate_all(~coalesce(.,12)) %>% 
+  group_by(mes)%>% 
+  summarise(amount= sum(amount))
+
+paste('El monto total de Contratación pública del año 2018 representa la cantidad de:',sum(dataF2$amount), 'usd.')
+
+```
+
+> **Data OCDS, correspondiente al total del monto adjudicado del año 2017.**
+
+```{r}
+dataG1 <- read.csv('awards_2017.csv')
+dataG1 <- as.data.frame(dataG1) %>% 
+  select(c(date, amount)) %>% 
+  drop_na() %>% 
+  mutate(date= ymd_hms(date)) %>% 
+  mutate(mes = month(date))
+  
+dataG2 <- dataG1 %>% 
+  select(c(amount, mes)) %>% 
+  mutate_all(~coalesce(.,12)) %>% 
+  group_by(mes)%>% 
+  summarise(amount= sum(amount))
+
+paste('El monto total de Contratación pública del año 2017 representa la cantidad de:',sum(dataG2$amount), 'usd.')
+```
+
+> **Data OCDS, correspondiente al total del monto adjudicado del año 2016.**
+
+```{r}
+dataH1 <- read.csv('awards_2016.csv')
+dataH1 <- as.data.frame(dataH1) %>% 
+  select(c(date, amount)) %>% 
+  drop_na() %>% 
+  mutate(date= ymd_hms(date)) %>% 
+  mutate(mes = month(date))
+  
+dataH2 <- dataH1 %>% 
+  select(c(amount, mes)) %>% 
+  mutate_all(~coalesce(.,12)) %>% 
+  group_by(mes)%>% 
+  summarise(amount= sum(amount))
+
+paste('El monto total de Contratación pública del año 2016 representa la cantidad de:',sum(dataH2$amount), 'usd.')
+```
+
+> **Data OCDS, correspondiente al total del monto adjudicado del año 2015.**
+
+```{r}
+dataI1 <- read.csv('awards_2015.csv')
+dataI1 <- as.data.frame(dataI1) %>% 
+  select(c(date, amount)) %>% 
+  drop_na() %>% 
+  mutate(date= ymd_hms(date)) %>% 
+  mutate(mes = month(date))
+  
+dataI2 <- dataI1 %>% 
+  select(c(amount, mes)) %>% 
+  mutate_all(~coalesce(.,12)) %>% 
+  group_by(mes)%>% 
+  summarise(amount= sum(amount))
+
+paste('El monto total de Contratación pública del año 2015 representa la cantidad de:',sum(dataI2$amount), 'usd.')
+```
+
+
+## Data de Variables-Predictoras
+
+```{r}
+Data <- read_excel("Data.xlsx")
+
+Data %>% 
+  slice_head(n = 5)
+```
+
+## Data Compilada
+
+- Datos compilados de forma mensual, correspondiente a los montos adjudicados desde el periodo 2015 al 2022.
+
+```{r}
+años <- rep(2015:2022, each = 12)
+meses <- rep(1:12, times = 8)
+meses2023 <- rep(1:8, times =1)
+cantidad <- rbind(dataI2,dataH2,dataG2,dataF2,dataE2,dataD2,dataC2,dataB2) %>% 
+  select(amount)
+# Creamos el dataframe
+df <- data.frame(Fecha = as.Date(paste(años, meses, "01", sep = "-"), format = "%Y-%m-%d"),cantidad = cantidad)
+
+dataA2 <- data.frame(Fecha = as.Date(paste(2023, meses2023, "01", sep = "-"), format = "%Y-%m-%d"),cantidad =dataA2[2] )
+
+df <- rbind(df, dataA2)
+
+dataX <- cbind.data.frame(Data, CP=df$amount)
+
+dataX %>%
+  slice_head(n=5)
+
+summary(dataX)
+```
+
+# EDA. 
+
+- Histograma por cada característica, representando su media y mediana
+
+```{r}
+# Create a data frame of numeric features & label
+numeric_features <- dataX %>% 
+  select(c(m2, Ingr_trib, Gast_SPF, CP))
+
+# Pivot data to a long format
+numeric_features <- numeric_features %>% 
+  pivot_longer(!CP,names_to = "features", values_to = "values") %>%
+  group_by(features) %>% 
+  mutate(Mean = mean(values),
+         Median = median(values))
+
+ 
+# Plot a histogram for each feature
+numeric_features %>%
+  ggplot() +
+  geom_histogram(aes(x = values, fill = features), bins = 100, alpha = 0.7, show.legend = F) +
+  facet_wrap(~ features, scales = 'free')+
+  paletteer::scale_fill_paletteer_d("ggthemes::excel_Parallax") +
+  
+  # Add lines for mean and median
+  geom_vline(aes(xintercept = Mean, color = "Mean"), linetype = "dashed", size = 1.3 ) +
+  geom_vline(aes(xintercept = Median, color = "Median"), linetype = "dashed", size = 1.3 ) +
+  scale_color_manual(name = "", values = c(Mean = "red", Median = "yellow"))
+```
+
+- Con los datos normalizados es fácil ver una aparente relación entre variables. No indica un emparejamiento exacto, pero se ve claramente que el valor más alto de la contratación pública durante el periodo de análisis coincide con los montos más altos de las variables predictoras. 
+
+```{r}
+
+dataZ<- as.data.frame(dataX) %>% 
+  mutate(Year = year(date))
+  
+dataZ_2 <- dataZ %>% 
+  group_by(Year)%>% 
+  summarise(CP= sum(CP), m2=sum(m2), Ingr_trib= sum(Ingr_trib), Gast_SPF=sum(Gast_SPF) )
+
+# Pivot data from wide to long
+df_sample_long <- dataZ_2 %>%
+  pivot_longer(!Year, names_to = "Metrics", values_to = "Values")
+
+# Normalize the numeric columns
+df_normalized <- df_sample_long %>% 
+  group_by(Metrics) %>% 
+  mutate(Values = rescale(Values, to = c(0, 1)))
+
+# Show some of the normalized data
+df_normalized %>% 
+  slice_head(n = 5)
+
+# Comparación de variables mediante un bar plot
+ggplot(data = df_normalized) +
+  geom_bar(mapping = aes(x = Year, y = Values, fill = Metrics), alpha = 0.7, stat = "identity", position = position_dodge(width = 0.9)) +
+  xlab('Años') +
+  ylab('') +
+  scale_fill_paletteer_d("calecopal::kelp1") +
+  theme(
+    panel.grid = element_blank(),
+    panel.grid.major.y = element_line(color = '#95a5a6',
+                                      linetype = 'dashed',
+                                      size = 0.5),
+    axis.text.x = element_text(angle = 90),
+    legend.title = element_blank()
+  )
+```
+
+```{r}
+# Plot a scatter plot for each feature
+numeric_features %>% 
+  mutate(corr_coef = cor(values, CP)) %>%
+  mutate(features = paste(features, ' vs CP, r = ', corr_coef, sep = '')) %>% 
+  ggplot(aes(x = values, y = CP, color = features)) +
+  geom_point(alpha = 0.7, show.legend = F) +
+  facet_wrap(~ features, scales = 'free')+
+  paletteer::scale_color_paletteer_d("ggthemes::excel_Parallax")
+
+```
+
+
+# Modelos
+
+```{r}
+# Seleccionamos las caracterisitcas y etiquetas deseadas
+dataSelect <- dataX %>%
+  select(c(m2, Ingr_trib, Gast_SPF, CP))
+
+# Dividimos 80% de los datos para training y el resto para testing
+set.seed(2056)
+data_split <- dataSelect %>% 
+  initial_split(prop = 0.8,
+                  strata = CP)
+
+# Extracción de los datos
+dataTrain <- training(data_split)
+dataTest <- testing(data_split)
+
+# Especificamos algunas metricas de regresión
+
+eval_metric <- metric_set(rmse, rsq)
+
+cat("Training Set", nrow(dataTrain), "rows", "\nTest Set", nrow(dataTest), "rows")
+```
+
+
+## Modelo Random Forest
+
+```{r}
+# For reproducibility
+set.seed(2056)
+
+# Build a random forest model specification
+rf_spec <- rand_forest() %>% 
+  set_engine('randomForest') %>% 
+  set_mode('regression')
+
+# Train a random forest model 
+rf_mod <- rf_spec %>% 
+  fit(CP ~ ., data = dataTrain)
+
+results_rf <- rf_mod %>% 
+  augment(new_data = dataTest) %>% 
+  rename(predictions = .pred)
+
+# Create a metric set
+eval_metrics_rf <- metric_set(rmse, rsq)
+
+rf_metrics <- eval_metrics_rf(data = results_rf,
+                                  truth = CP,
+                                  estimate = predictions)
+                          
+rf_plt <- results_rf %>% 
+  ggplot(mapping = aes(x = CP, y = predictions)) +
+  geom_point(color = '#6CBE50FF') +
+  geom_smooth(method = 'lm', color = '#2B7FF9FF', se = F) +
+  ggtitle("Daily Bike Share Predictions") +
+  xlab("Actual Labels") +
+  ylab("Predicted Labels") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+list(rf_metrics[2, ], rf_plt)
+```
+
+## Modelo LASSO
+
+```{r}
+# Build a lasso model
+lasso_spec <- linear_reg(
+  engine = "glmnet",
+  mode = "regression",
+  penalty = 1,
+  mixture = 1)
+
+# Train
+lasso_mod <- lasso_spec %>% 
+  fit(CP ~ ., data = dataTrain)
+
+results_lasso <- dataTest %>% 
+  bind_cols(lasso_mod %>% predict(new_data = dataTest) %>% 
+              rename(predictions = .pred))
+
+eval_metrics <- metric_set(rmse, rsq)
+lasso_metrics <- eval_metrics(data = results_lasso,
+                                    truth = CP,
+                                    estimate = predictions) 
+
+theme_set(theme_light())
+lasso_plt <- results_lasso %>% 
+  ggplot(mapping = aes(x = CP, y = predictions)) +
+  geom_point(size = 1.6, color = 'darkorchid') +
+  geom_smooth(method = 'lm', color = 'black', se = F) +
+  ggtitle("Predicciones de Compras públicas") +
+  xlab("Actual Labels") +
+  ylab("Predicted Labels") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Return evaluations
+list(lasso_metrics[2, ], lasso_plt)
+```
+
+
+## Modelo Decision Tree
+
+```{r}
+# Build a decision tree
+tree_spec <- decision_tree(
+  engine = "rpart",
+  mode = "regression")
+
+tree_mod <- tree_spec %>% 
+  fit(CP ~ ., data = dataTrain)
+
+results_tree <- tree_mod %>% 
+  augment(new_data = dataTest) %>% 
+  rename(predictions = .pred)
+
+tree_metrics <- eval_metrics(data = results_tree,
+                                  truth = CP,
+                                  estimate = predictions)
+
+tree_plt <- results_tree %>% 
+  ggplot(mapping = aes(x = CP, y = predictions)) +
+  geom_point(color = 'tomato') +
+  geom_smooth(method = 'lm', color = 'steelblue', se = F) +
+  ggtitle("Predicciones de Compra pública") +
+  xlab("Actual Labels") +
+  ylab("Predicted Labels") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Return evaluations
+list(tree_metrics[2, ], tree_plt)
+```
+
+
+## XGBOOST
+
+```{r}
+# Especificamos un recipiente
+DataRecipe <- recipe(CP ~ ., data = dataTrain) %>% 
+  step_normalize(all_numeric_predictors()) %>% 
+  step_dummy(all_nominal_predictors()) 
+
+# Hacemos una especificación de modelo ajustable
+DataSpec <- boost_tree(trees = 50,
+                         tree_depth = tune(),
+                         learn_rate = tune()) %>% 
+  set_engine('xgboost') %>% 
+  set_mode('regression')
+
+# Agrupe laa receta y la especificación del modelo mediante un WF
+boost_workflow <- workflow() %>% 
+  add_recipe(DataRecipe) %>% 
+  add_model(DataSpec)
+
+```
+
+- Creamos una grilla de parámetros de ajuste
+
+```{r}
+tree_grid <- grid_regular(tree_depth(), learn_rate(range = c(0.01, 0.3), trans = NULL), levels = 5)
+```
+
+- Cross-validation
+
+```{r}
+set.seed(2056)
+# 5 fold CV repeated once
+DataFolds <- vfold_cv(data = dataTrain, v = 5, repeats = 1)
+
+```
+
+- Procesamiento en paralelo
+
+```{r}
+doParallel::registerDoParallel()
+
+set.seed(2020)
+tree_grid <- tune_grid(
+  object = boost_workflow,
+  resamples = DataFolds,
+  grid = tree_grid)
+
+
+```
+
+- Visualizamos los resultados del tuning 
+
+```{r}
+
+tree_grid %>% 
+  collect_metrics() %>% 
+  mutate(tree_depth = factor(tree_depth)) %>% 
+  ggplot(mapping = aes(x = learn_rate, y = mean,
+                       color = tree_depth)) +
+  geom_line(size = 0.6) +
+  geom_point(size = 2) +
+  facet_wrap(~ .metric, scales = 'free', nrow = 2)+
+  scale_color_viridis_d(option = "plasma", begin = .9, end = 0)
+```
+
+- Selección del mejor iperparámetro 
+
+```{r}
+best_tree <- tree_grid %>% 
+  select_best('rmse')
+```
+
+- Finalizar el modelo XGBOOST
+
+```{r}
+# Update workflow
+final_wf <- boost_workflow %>% 
+  finalize_workflow(best_tree)
+```
+
+```{r}
+# Último ajuste
+final_fit <- final_wf %>% 
+  last_fit(data_split)
+
+final_fit %>% 
+  collect_metrics('rsq')
+```
+
+- Usamos el modelo entrenado
+
+```{r}
+CP_boost_model <- final_fit$.workflow[[1]]
+
+saveRDS(CP_boost_model, 'CP_boost_model.rds')
+
+```
+
+```{r}
+
+# Load the model
+loaded_model <- readRDS("CP_boost_model.rds")
+
+# Use the model to predict rentals
+results_1 <- loaded_model %>% 
+  augment(dataTest)
+
+# See model predictions 
+View(results_1)
+
+```
+
+# RESULTADOS
+
+De los 4 modelos analizados, se determina que el modelo Decisión Tree explica de mejor manera los datos, con una métrica rsq de 0.709.
+
+```{r}
+results_tree %>%
+  select(CP, predictions)%>%
+  slice_sample(n=10)
+```
+
+# CONCLUSIONES
+
+- El modelo de árboles de decisión demuestra una explicación del 70 % de los datos utilizados, si bien es cierto, aun no se puede considerar a esto como un valor altamente representativo, sin embargo, hay que considerar que los datos obtenidos de la plataforma de Contrataciones de Datos Abiertos, no consideran ciertos procesos de contratación, como por ejemplo las ínfimas cuantías, procedimiento más utilizado por las entidades pertenecientes al sector público, la no incorporación de este proceso si representa un déficit monetario altamente significativo.
+
+- Los modelos realizados pueden ser utilizados y mejorados conforme se vaya generando más información, la importancia de este modelo radica en que, con la ayuda del Machine Learning se pueden tomar decisiones de política monetaria, es decir, si el Gobierno Central prevé obtener más liquidez o en su defecto mayores ingresos tributarios, puede acudir a la contratación pública, considerándola como una herramienta dinamizadora de la economía, permitiéndole tener una guía de cuanto recursos invertir en la contratación pública.
+
+# RECOMENDACIONES
+
+- Actualmente el SERCOP permite obtener y visualizar sus datos de 2 sitios web diferentes ([DataOCD](https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA), [Contratación en Cifras](https://app.powerbi.com/view?r=eyJrIjoiMWI4MjI3ODktYWY0NS00YWRmLThmMzItMDZhOWNiZmY2NTI1IiwidCI6ImQ2NDk2NzM4LWY5MTItNGExZS04NDE1LTQwY2E2ZjRhOTRlZCJ9 )), en donde se muestran resultados diferentes, por ejemplo; El monto total de Contratación Pública adjudicado en el año 2022 en la página [DataOCD](https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA), detalla un valor de  $6.795.379.656,80  y para el mismo año en la página [Contratación en Cifras](https://app.powerbi.com/view?r=eyJrIjoiMWI4MjI3ODktYWY0NS00YWRmLThmMzItMDZhOWNiZmY2NTI1IiwidCI6ImQ2NDk2NzM4LWY5MTItNGExZS04NDE1LTQwY2E2ZjRhOTRlZCJ9 ), detalla un valor de  $7.698.094.935,14. **Para futura investigaciones es importante que el SERCOP detalle una concordancia de la información, permitiendo así un análisis más apegado a la realidad de la Compra Pública. 
+
+
+
+
+
+
+
+
+
+
+
