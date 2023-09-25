@@ -31,7 +31,7 @@ Las Contrataciones Abiertas permiten mejorar la divulgación, calidad y uso de l
 El presente trabajo pretende centrar a la Contratación Pública como herramienta fundamental para tomar decisiones de Política Monetaria, su importancia radica en la gran cantidad de dinero que es destinada año a año a los procesos de Compras Públicas. Esta importante suma de dinero tiene como finalidad dinamizar el trabajo a través de los distintos proveedores, es decir, la eficiencia y el buen manejo del dinero hacia el destinatario final mejorará la economía del país, puesto que, el proveedor, contratista, consultor o cualquier persona que le venda sus servicios, obras y bienes al pondrá a trabajar el dinero obtenido, dando empelo, adquiriendo suministros o cualquier materia prima que le permita cumplir con el objeto de contratación. 
 
 ::: callout-note
-El presente análisis se realiza mediante el lenguaje R y se presenta en formato QUARTO. Palabras claves: Liquidez M2, Gastos del Sector Público, Ingresos tributarios, Política Económica.
+El presente análisis se realiza mediante el lenguaje R y se presenta en formato QUARTO. Palabras claves: Liquidez M2, Gastos del Sector Público, Ingresos tributarios, Oferta Monetaria, Política Económica.
 :::
 
 # LIBRERÍAS UTILIZADAS
@@ -60,6 +60,7 @@ library(paletteer)
 | Liquidez Total            | M2        | num    | Independiente|
 | Ingresos Tributarios      | Ingr_trib | num    | Independiente|
 | Gastos del Sector Público | Gast_SPF  | num    | Independiente|
+| Oferta Monetaria          | Ofert_M1  | num    | Independiente|
 | Contratación Pública      | CP        | num    | Dependiente  |
 
 : Variables utilizadas {#tbl-letters}
@@ -285,7 +286,7 @@ summary(dataX)
 ```{r}
 # Create a data frame of numeric features & label
 numeric_features <- dataX %>% 
-  select(c(m2, Ingr_trib, Gast_SPF, CP))
+  select(c(m2, Ingr_trib, Gast_SPF, Ofert_M1, CP))
 
 # Pivot data to a long format
 numeric_features <- numeric_features %>% 
@@ -317,7 +318,7 @@ dataZ<- as.data.frame(dataX) %>%
   
 dataZ_2 <- dataZ %>% 
   group_by(Year)%>% 
-  summarise(CP= sum(CP), m2=sum(m2), Ingr_trib= sum(Ingr_trib), Gast_SPF=sum(Gast_SPF) )
+  summarise(CP= sum(CP), m2=sum(m2), Ingr_trib= sum(Ingr_trib), Gast_SPF=sum(Gast_SPF), Ofert_M1=sum(Ofert_M1))
 
 # Pivot data from wide to long
 df_sample_long <- dataZ_2 %>%
@@ -361,18 +362,17 @@ numeric_features %>%
 ```
 
 
-# Modelos
+# MODELOS
 
 ```{r}
 # Seleccionamos las caracterisitcas y etiquetas deseadas
 dataSelect <- dataX %>%
-  select(c(m2, Ingr_trib, Gast_SPF, CP))
+  select(c(m2, Ingr_trib, Gast_SPF, Ofert_M1, CP))
 
 # Dividimos 80% de los datos para training y el resto para testing
 set.seed(2056)
 data_split <- dataSelect %>% 
-  initial_split(prop = 0.8,
-                  strata = CP)
+  initial_split(prop = 0.8)
 
 # Extracción de los datos
 dataTrain <- training(data_split)
@@ -495,7 +495,7 @@ list(tree_metrics[2, ], tree_plt)
 ```
 
 
-## XGBOOST
+## Boosting
 
 ```{r}
 # Especificamos un recipiente
@@ -543,7 +543,6 @@ tree_grid <- tune_grid(
   resamples = DataFolds,
   grid = tree_grid)
 
-
 ```
 
 - Visualizamos los resultados del tuning 
@@ -581,8 +580,10 @@ final_wf <- boost_workflow %>%
 final_fit <- final_wf %>% 
   last_fit(data_split)
 
-final_fit %>% 
+final_fit %>%
   collect_metrics('rsq')
+
+
 ```
 
 - Usamos el modelo entrenado
@@ -601,23 +602,29 @@ loaded_model <- readRDS("CP_boost_model.rds")
 # Use the model to predict rentals
 results_1 <- loaded_model %>% 
   augment(dataTest)
+
+XGB_metrics <- eval_metrics(data = results_1,
+                                  truth = CP,
+                                  estimate = .pred)
+
+XGB_metrics[2, ]
 ```
 
 # RESULTADOS
 
-De los 4 modelos analizados, se determina que el modelo Decisión Tree explica de mejor manera los datos, con una métrica rsq de 0.709.
+De los 4 modelos analizados, se determina que el modelo **Boosting** explica de mejor manera los datos, con una métrica rsq de 0.69.
 
 ```{r}
-results_tree %>%
-  select(CP, predictions)%>%
-  slice_sample(n=10)
+results_1 %>%
+  select(CP, .pred)%>%
+  slice_sample(n=6)
 ```
 
 # CONCLUSIONES
 
-- El modelo de árboles de decisión demuestra una explicación del 70 % de los datos utilizados, si bien es cierto, aun no se puede considerar a esto como un valor altamente representativo, sin embargo, hay que considerar que los datos obtenidos de la plataforma de Contrataciones de Datos Abiertos, no consideran ciertos procesos de contratación, como por ejemplo las ínfimas cuantías, procedimiento más utilizado por las entidades pertenecientes al sector público, la no incorporación de este proceso si representa un déficit monetario altamente significativo.
+- El modelo BOOSTING muestra una explicación del 70 % de los datos utilizados, si bien es cierto, aun no se puede considerar a esto como un valor altamente representativo, sin embargo, hay que considerar que los datos obtenidos de la plataforma de Contrataciones de Datos Abiertos, no consideran ciertos procesos de contratación, como por ejemplo las ínfimas cuantías, procedimiento más utilizado por las entidades pertenecientes al sector público, la no incorporación de este proceso si representa un déficit monetario altamente significativo.
 
-- Los modelos realizados pueden ser utilizados y mejorados conforme se vaya generando más información, la importancia de este modelo radica en que, con la ayuda del Machine Learning se pueden tomar decisiones de política monetaria, es decir, si el Gobierno Central prevé obtener más liquidez o en su defecto mayores ingresos tributarios, puede acudir a la contratación pública, considerándola como una herramienta dinamizadora de la economía, permitiéndole tener una guía de cuanto recursos invertir en la contratación pública.
+- Los modelos realizados pueden ser utilizados y mejorados conforme se vaya generando más información, la importancia de este modelo radica en que, con la ayuda del Machine Learning se pueden tomar decisiones de política monetaria, es decir, si el Gobierno Central prevé obtener más liquidez o en su defecto mayores ingresos tributarios, puede acudir a la contratación pública, considerándola como una herramienta dinamizadora de la economía, permitiéndole tener una guía de cuanto recursos invertir en la contratación pública, hay que considerar que los recursos destinados a la compra pública generan de manera directa e indirecta, cierta liquidez, empleo, aumento de los tributos. Aplicando el *principio Ceteris paribus*, se puede analizar cómo mejorar las variables analizadas en relación a la compra pública. 
 
 # RECOMENDACIONES
 
