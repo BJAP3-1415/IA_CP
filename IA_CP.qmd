@@ -372,7 +372,7 @@ dataSelect <- dataX %>%
 # Dividimos 80% de los datos para training y el resto para testing
 set.seed(2056)
 data_split <- dataSelect %>% 
-  initial_split(prop = 0.8)
+  initial_split(prop = 0.8, strata = CP)
 
 # Extracción de los datos
 dataTrain <- training(data_split)
@@ -526,7 +526,6 @@ tree_grid <- grid_regular(tree_depth(), learn_rate(range = c(0.01, 0.3), trans =
 - Cross-validation
 
 ```{r}
-set.seed(2056)
 # 5 fold CV repeated once
 DataFolds <- vfold_cv(data = dataTrain, v = 5, repeats = 1)
 
@@ -579,11 +578,6 @@ final_wf <- boost_workflow %>%
 # Último ajuste
 final_fit <- final_wf %>% 
   last_fit(data_split)
-
-final_fit %>%
-  collect_metrics('rsq')
-
-
 ```
 
 - Usamos el modelo entrenado
@@ -612,17 +606,18 @@ XGB_metrics[2, ]
 
 # RESULTADOS
 
-De los 4 modelos analizados, se determina que el modelo **Boosting** explica de mejor manera los datos, con una métrica rsq de 0.69.
+De los 4 modelos analizados, se determina que el modelo **Boosting** explica de mejor manera los datos, con una métrica rsq de 0.73.
 
 ```{r}
-results_1 %>%
-  select(CP, .pred)%>%
-  slice_sample(n=6)
+#| echo: false
+
+results_1[c(3,15, 16, 17), c(1:6)]
+
 ```
 
 # CONCLUSIONES
 
-- El modelo BOOSTING muestra una explicación del 70 % de los datos utilizados, si bien es cierto, aun no se puede considerar a esto como un valor altamente representativo, sin embargo, hay que considerar que los datos obtenidos de la plataforma de Contrataciones de Datos Abiertos, no consideran ciertos procesos de contratación, como por ejemplo las ínfimas cuantías, procedimiento más utilizado por las entidades pertenecientes al sector público, la no incorporación de este proceso si representa un déficit monetario altamente significativo.
+- El modelo BOOSTING muestra una explicación del 73 % de los datos utilizados, si bien es cierto, aun no se puede considerar a esto como un valor altamente representativo, sin embargo, hay que considerar que los datos obtenidos de la plataforma de Contrataciones de Datos Abiertos, no consideran ciertos procesos de contratación, como por ejemplo las ínfimas cuantías, procedimiento más utilizado por las entidades pertenecientes al sector público, la no incorporación de este proceso si representa un déficit monetario altamente significativo.
 
 - Los modelos realizados pueden ser utilizados y mejorados conforme se vaya generando más información, la importancia de este modelo radica en que, con la ayuda del Machine Learning se pueden tomar decisiones de política monetaria, es decir, si el Gobierno Central prevé obtener más liquidez o en su defecto mayores ingresos tributarios, puede acudir a la contratación pública, considerándola como una herramienta dinamizadora de la economía, permitiéndole tener una guía de cuanto recursos invertir en la contratación pública, hay que considerar que los recursos destinados a la compra pública generan de manera directa e indirecta, cierta liquidez, empleo, aumento de los tributos. Aplicando el *principio Ceteris paribus*, se puede analizar cómo mejorar las variables analizadas en relación a la compra pública. 
 
